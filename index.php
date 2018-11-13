@@ -22,7 +22,7 @@ if ( ! class_exists( 'WP_List_Table' ) ) {
     require_once( ABSPATH . 'wp-admin/includes/class-wp-list-table.php' );
 }
 
-class Customers_List extends WP_List_Table {
+class ViewFilters extends WP_List_Table {
 
     
     /**
@@ -33,7 +33,7 @@ class Customers_List extends WP_List_Table {
     *
     * @return mixed
     */
-    public static $table_name = 'customers';
+    public static $table_name = 'posts';
 
     public static function get_filters( $per_page = 5, $page_number = 1 ) {
        
@@ -41,12 +41,12 @@ class Customers_List extends WP_List_Table {
 
         $offset = ' OFFSET ' . ( $page_number - 1 ) * $per_page;
 
-        $sql = "SELECT * FROM {$wpdb->prefix}".self::$table_name;
+        $sql = "SELECT * FROM {$wpdb->prefix}".self::$table_name." WHERE post_type='ups_filter'";
 
         if(isset($_POST['s']))
         {
             $s = esc_sql($_POST['s']);
-            $sql .= " WHERE (`name` LIKE '%".$s."%' OR `address` LIKE '%".$s."%' OR `city` LIKE '%".$s."%')";
+            $sql .= " AND (`post_title` LIKE '%".$s."%' OR `post_content` LIKE '%".$s."%' OR `post_status` LIKE '%".$s."%')";
             $offset = '';
         }
 
@@ -58,7 +58,7 @@ class Customers_List extends WP_List_Table {
 
         $sql .= " LIMIT $per_page";
 
-        echo $sql .= $offset;
+        $sql .= $offset;
 
        
         $result = $wpdb->get_results( $sql, 'ARRAY_A' );
@@ -89,12 +89,12 @@ class Customers_List extends WP_List_Table {
     public static function record_count() {
         global $wpdb;
 
-        $sql = "SELECT COUNT(*) FROM {$wpdb->prefix}".self::$table_name;
+        $sql = "SELECT COUNT(*) FROM {$wpdb->prefix}".self::$table_name." WHERE post_type='ups_filter'";
 
         return $wpdb->get_var( $sql );
     }
     public function no_items() {
-  _e( 'No filters avaliable.', 'sp' );
+  _e( 'No filter avaliable.', 'sp' );
 }
 
 /**
@@ -109,7 +109,7 @@ function column_name( $item ) {
   // create a nonce
   $delete_nonce = wp_create_nonce( 'sp_delete_filter' );
 
-  $title = '<strong>' . $item['name'] . '</strong>';
+  $title = '<strong>' . $item['post_title'] . '</strong>';
 
   $actions = [
     'delete' => sprintf( '<a href="?page=%s&action=%s&customer=%s&_wpnonce=%s">Delete</a>', esc_attr( $_REQUEST['page'] ), 'delete', absint( $item['ID'] ), $delete_nonce ),
@@ -121,8 +121,8 @@ function column_name( $item ) {
 
 public function column_default( $item, $column_name ) {
   switch ( $column_name ) {
-    case 'address':
-    case 'city':
+    case 'post_content':
+    case 'post_status':
       return $item[ $column_name ];
     default:
       return print_r( $item, true ); //Show the whole array for troubleshooting purposes
@@ -138,9 +138,9 @@ function column_cb( $item ) {
 function get_columns() {
   $columns = [
     'cb'      => '<input type="checkbox" />',
-    'name'    => __( 'Name', 'sp' ),
-    'address' => __( 'Address', 'sp' ),
-    'city'    => __( 'City', 'sp' )
+    'post_title'    => __( 'Filter', 'sp' ),
+    'post_content' => __( 'Content', 'sp' ),
+    'post_status'    => __( 'Status', 'sp' )
   ];
 
   return $columns;
@@ -148,8 +148,8 @@ function get_columns() {
 
 public function get_sortable_columns() {
   $sortable_columns = array(
-    'name' => array( 'name', true ),
-    'city' => array( 'city', false )
+    'post_title' => array( 'post_title', true ),
+    'post_status' => array( 'post_status', false )
   );
 
   return $sortable_columns;
@@ -192,7 +192,7 @@ public function process_bulk_action() {
     $nonce = esc_attr( $_REQUEST['_wpnonce'] );
 
     if ( ! wp_verify_nonce( $nonce, 'sp_delete_filter' ) ) {
-      die( 'Go get a life script kiddies' );
+      die( 'Session destroyed' );
     }
     else {
       self::delete_filter( absint( $_GET['customer'] ) );
@@ -228,7 +228,7 @@ public function process_bulk_action() {
 } // end of class customers
 
 
-class SP_Plugin {
+class UPS_Plugin {
 
     // class instance
     static $instance;
@@ -266,35 +266,26 @@ public function plugin_menu() {
     add_submenu_page('ups-view-all', __('Settings','menu-test'), __('Settings','menu-test'), 'manage_options', 'ups-settings', 'ups_settings');
 
 
-//////
-/*add_action('admin_menu', 'my_menu_pages');
-function my_menu_pages(){
-    add_menu_page('My Page Title', 'My Menu Title', 'manage_options', 'my-menu', 'my_menu_output' );
-    add_submenu_page('my-menu', 'Submenu Page Title', 'Whatever You Want', 'manage_options', 'my-menu' );
-    add_submenu_page('my-menu', 'Submenu Page Title2', 'Whatever You Want2', 'manage_options', 'my-menu2' );
-}*/
-
-
 }
 
 public function screen_option() {
 
     $option = 'per_page';
     $args   = [
-        'label'   => 'Customers',
+        'label'   => 'Number of records',
         'default' => 5,
         'option'  => 'customers_per_page'
     ];
 
     add_screen_option( $option, $args );
 
-    $this->customers_obj = new Customers_List();
+    $this->flter = new ViewFilters();
 }
 
 public function ups_view_all() {
     ?>
     <div class="wrap">
-        <h2>List of customers</h2>
+        <h2>List of filters</h2>
 
         <div id="poststuff">
             <div id="post-body" class="metabox-holder columns-3">
@@ -311,8 +302,8 @@ public function ups_view_all() {
                     
                         <form method="post">
                             <?php
-                            $this->customers_obj->prepare_items();
-                            $this->customers_obj->display(); ?>
+                            $this->flter->prepare_items();
+                            $this->flter->display(); ?>
                         </form>
                     </div>
                 </div>
@@ -337,5 +328,5 @@ public static function get_instance() {
 
 
 add_action( 'plugins_loaded', function () {
-    SP_Plugin::get_instance();
+    UPS_Plugin::get_instance();
 });
