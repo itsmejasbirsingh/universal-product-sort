@@ -69,7 +69,7 @@ class ViewFilters extends WP_List_Table {
     /**
     * Delete a customer record.
     *
-    * @param int $id customer ID
+    * @param int $id record ID
     */
     public static function delete_filter( $id ) {
         global $wpdb;
@@ -112,7 +112,7 @@ function column_name( $item ) {
   $title = '<strong>' . $item['post_title'] . '</strong>';
 
   $actions = [
-    'delete' => sprintf( '<a href="?page=%s&action=%s&customer=%s&_wpnonce=%s">Delete</a>', esc_attr( $_REQUEST['page'] ), 'delete', absint( $item['ID'] ), $delete_nonce ),
+    'delete' => sprintf( '<a href="?page=%s&action=%s&record=%s&_wpnonce=%s">Delete</a>', esc_attr( $_REQUEST['page'] ), 'delete', absint( $item['ID'] ), $delete_nonce ),
     'edit' => sprintf( '<a href="?page=%s&action=%s&edit=%s">Edit</a>', esc_attr( $_REQUEST['page'] ), 'edit', absint( $item['ID'] ))
   ];
 
@@ -170,13 +170,13 @@ public function prepare_items() {
   /** Process bulk action */
   $this->process_bulk_action();
 
-  $per_page     = $this->get_items_per_page( 'customers_per_page', 5 );
+  $per_page     = $this->get_items_per_page( 'records_per_page', 5 );
   $current_page = $this->get_pagenum();
   $total_items  = self::record_count();
 
   $this->set_pagination_args( [
-    'total_items' => $total_items, //WE have to calculate the total number of items
-    'per_page'    => $per_page //WE have to determine how many items to show on a page
+    'total_items' => $total_items, //calculate the total number of items
+    'per_page'    => $per_page //determine how many items to show on a page
   ] );
 
 
@@ -192,10 +192,10 @@ public function process_bulk_action() {
     $nonce = esc_attr( $_REQUEST['_wpnonce'] );
 
     if ( ! wp_verify_nonce( $nonce, 'sp_delete_filter' ) ) {
-      die( 'Session destroyed' );
+      die( 'Session ends!' );
     }
     else {
-      self::delete_filter( absint( $_GET['customer'] ) );
+      self::delete_filter( absint( $_GET['record'] ) );
 
       wp_redirect( esc_url( add_query_arg() ) );
       exit;
@@ -274,7 +274,7 @@ public function screen_option() {
     $args   = [
         'label'   => 'Number of records',
         'default' => 5,
-        'option'  => 'customers_per_page'
+        'option'  => 'records_per_page'
     ];
 
     add_screen_option( $option, $args );
@@ -324,7 +324,7 @@ public static function get_instance() {
     return self::$instance;
 }
 
-} // end of class sp
+} // end of class ups
 
 
 add_action( 'plugins_loaded', function () {
