@@ -7,16 +7,6 @@
     Author URI: http://mindfiresolutions.com
     Version: 0.1
 */
-///////////////////
-function ups_create_new() {
-    echo "<h2>" . __( 'Create new', 'menu-test' ) . "</h2>";
-}
-
-function ups_settings() {
-    echo "<h2>" . __( 'Settings', 'menu-test' ) . "</h2>";
-}
-
-
 
 if ( ! class_exists( 'WP_List_Table' ) ) {
     require_once( ABSPATH . 'wp-admin/includes/class-wp-list-table.php' );
@@ -25,28 +15,36 @@ if ( ! class_exists( 'WP_List_Table' ) ) {
 class ViewFilters extends WP_List_Table {
 
     
+    
+    public static $table_name = 'posts';
+
+
+    public static function search_condition($s)
+    {
+            $s = esc_sql($_GET['s']);
+            $sql = " AND (`post_title` LIKE '%".$s."%' OR `post_content` LIKE '%".$s."%' OR `post_status` LIKE '%".$s."%')";
+            return $sql;
+    }
+
     /**
-    * Retrieve customer’s data from the database
+    * Retrieve filters data from the database
     *
     * @param int $per_page
     * @param int $page_number
     *
-    * @return mixed
+    * @return records
     */
-    public static $table_name = 'posts';
-
     public static function get_filters( $per_page = 5, $page_number = 1 ) {
-       
+      
         global $wpdb;
 
         $offset = ' OFFSET ' . ( $page_number - 1 ) * $per_page;
 
         $sql = "SELECT * FROM {$wpdb->prefix}".self::$table_name." WHERE post_type='ups_filter'";
 
-        if(isset($_POST['s']))
+        if(isset($_GET['s']))
         {
-            $s = esc_sql($_POST['s']);
-            $sql .= " AND (`post_title` LIKE '%".$s."%' OR `post_content` LIKE '%".$s."%' OR `post_status` LIKE '%".$s."%')";
+            $sql .= self::search_condition($_GET['s']);
             $offset = '';
         }
 
@@ -67,7 +65,7 @@ class ViewFilters extends WP_List_Table {
     }
 
     /**
-    * Delete a customer record.
+    * Delete a record.
     *
     * @param int $id record ID
     */
@@ -90,6 +88,10 @@ class ViewFilters extends WP_List_Table {
         global $wpdb;
 
         $sql = "SELECT COUNT(*) FROM {$wpdb->prefix}".self::$table_name." WHERE post_type='ups_filter'";
+        if(isset($_GET['s']))
+        {
+            $sql .= self::search_condition($_GET['s']);
+        }
 
         return $wpdb->get_var( $sql );
     }
@@ -226,108 +228,9 @@ public function process_bulk_action() {
 
 
 
-} // end of class customers
-
-
-class UPS_Plugin {
-
-    // class instance
-    static $instance;
-
-    // customer WP_List_Table object
-    public $customers_obj;
-
-    // class constructor
-    public function __construct() {
-        add_filter( 'set-screen-option', [ __CLASS__, 'set_screen' ], 10, 3 );
-        add_action( 'admin_menu', [ $this, 'plugin_menu' ] );
-    }
-    public static function set_screen( $status, $option, $value ) {
-    return $value;
-}
-public function plugin_menu() {
-
-    $hook = add_menu_page(
-        'Universal Product Sort (UPS)', // page title
-        'Universal Product Sort', // menu title
-        'manage_options', // capability
-        'ups-view-all', // slug
-        [ $this, 'ups_view_all' ], // method call
-        'https://s.w.org/favicon.ico?2' // menu image
-    );
-
-    add_action( "load-$hook", [ $this, 'screen_option' ] );
-
-
-    add_submenu_page('ups-view-all', 'View All', 'View All Filters', 'manage_options', 'ups-view-all', 'ups_view_all');
-
-  
-    add_submenu_page('ups-view-all', 'Add New', 'Add New', 'manage_options', 'ups-create-new', 'ups_create_new');
-
-    add_submenu_page('ups-view-all', __('Settings','menu-test'), __('Settings','menu-test'), 'manage_options', 'ups-settings', 'ups_settings');
-
-
 }
 
-public function screen_option() {
-
-    $option = 'per_page';
-    $args   = [
-        'label'   => 'Number of records',
-        'default' => 5,
-        'option'  => 'records_per_page'
-    ];
-
-    add_screen_option( $option, $args );
-
-    $this->flter = new ViewFilters();
-}
-
-public function ups_view_all() {
-    ?>
-    <div class="wrap">
-        <h2>List of filters</h2>
-
-        <div id="poststuff">
-            <div id="post-body" class="metabox-holder columns-3">
-                <div id="post-body-content">
-                    <div class="meta-box-sortables ui-sortable">
-
-                    <form>
-                    <p class="search-box">
-                        <label class="screen-reader-text" for="post-search-input">Search:</label>
-                        <input type="search" id="post-search-input" name="s" value="<?php echo @$_POST['s']; ?>">
-                        <input type="submit" id="search-submit" class="button" value="Search">
-                    </p>
-                    </form>
-                    
-                        <form method="post">
-                            <?php
-                            $this->flter->prepare_items();
-                            $this->flter->display(); ?>
-                        </form>
-                    </div>
-                </div>
-            </div>
-            <br class="clear">
-        </div>
-    </div>
-<?php
-}
-
-
-
-public static function get_instance() {
-    if ( ! isset( self::$instance ) ) {
-        self::$instance = new self();
-    }
-
-    return self::$instance;
-}
-
-} // end of class ups
-
-
-add_action( 'plugins_loaded', function () {
-    UPS_Plugin::get_instance();
-});
+require_once('filter-create.php');
+require_once('filter-settings.php');
+require_once('plugin-menu.php');
+require_once('includes.php');
