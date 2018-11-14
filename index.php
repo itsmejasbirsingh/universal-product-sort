@@ -135,10 +135,11 @@ function column_cb( $item ) {
   );
 }
 
+//Here column `name` will be as it is, for showing default one
 function get_columns() {
   $columns = [
     'cb'      => '<input type="checkbox" />',
-    'post_title'    => __( 'Filter', 'sp' ),
+    'name'    => __( 'Filter', 'sp' ),
     'post_content' => __( 'Content', 'sp' ),
     'post_status'    => __( 'Status', 'sp' )
   ];
@@ -148,7 +149,7 @@ function get_columns() {
 
 public function get_sortable_columns() {
   $sortable_columns = array(
-    'post_title' => array( 'post_title', true ),
+    'name' => array( 'post_title', true ),
     'post_status' => array( 'post_status', false )
   );
 
