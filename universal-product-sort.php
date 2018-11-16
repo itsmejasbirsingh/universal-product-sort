@@ -12,9 +12,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+require_once('functions.php');
 require_once('class-settings.php');
-require_once('class-filters-listing.php');
+require_once('filters-listing.php');
 require_once('filter-create.php');
 require_once('filter-settings.php');
-require_once('class-plugin-menu.php');
 require_once('includes.php');

@@ -213,10 +213,8 @@ public function process_bulk_action() {
     wp_redirect( esc_url( add_query_arg() ) );
     exit;
   }
-}
-
-
-
-
+ }
 
 }
+
+require_once('class-plugin-menu.php');

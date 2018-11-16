@@ -1,14 +1,6 @@
 <?php
 class UPSSettings
 {
-	public function isEmpty($val)
-	{
-		if(isSet($val) && trim($val))
-		{
-			return false;
-		}
-		return true;
-	}
 	public function isFieldNameExist($val)
 	{
 		global $wpdb;
@@ -67,10 +59,31 @@ class UPSSettings
 								<?php echo $row->post_title; ?>
 							</li>						
 						<?php } ?>
-						
+
 						</ul>					
 		    </div>
 		<?php
 		}	
+	}
+	public function getPostStatusByPostType($post_type)
+	{
+		global $wpdb;
+		$data = array();
+
+		$post =  $wpdb->get_row("SELECT * FROM {$wpdb->prefix}posts WHERE `post_type` = '".$post_type."'");
+
+		if( ! empty( $post->ID ))
+		{
+			$data['post_status'] = $post->post_status;
+			$data['ID'] = $post->ID;		
+		}
+		else
+		{
+			$data['post_status'] = 'draft';
+			$data['ID'] = 0;
+		}
+
+			
+			return $data;
 	}
 }

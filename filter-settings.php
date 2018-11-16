@@ -1,8 +1,24 @@
 <?php
 function ups_settings() {
-	$s = new UPSSettings();
+	$setting = new UPSSettings();
+
+	$post = $setting->getPostStatusByPostType('ups_csv_added_cart');
     ?>
-    <h2>Extra Product Field Setup</h2>
+    <h2>OTHER SETTINGS</h2>
+    <div class="other-settings">
+    	<form id="form_other_settings">
+		    <p><input <?php if($post['post_status'] == 'publish') echo "checked"; ?> type="checkbox" name="is_csv_file_added_to_cart" id="is_csv_file_added_to_cart" value="1"> Each time you add an item to your cart(filter settings), a CSV file should be added to the cart to the submitted item</p>
+		    <p><input type="checkbox"> Logic query separator line</p>
+		    <p><input type="submit" value="Save" class="button button-primary"></p>
+		    <input type="hidden" name="action" value="other_settings">
+	    </form>
+    </div>
+
+	<hr>
+
+
+
+    <h2>EXTRA PRODUCT SETUP</h2>
     <div id="col-container">
 	    <div id="col-left">
 		    <form method="post" id="form_add_field">
@@ -43,12 +59,12 @@ function ups_settings() {
 		    	<input type="hidden" name="action" value="add_field">
 		    	<input type="hidden" name="_wpnonce" value="<?php echo wp_create_nonce( 'adding_field' ); ?>">
 		    </form>
-		    <?php $s->getAllFields(); ?>
+		    <?php $setting->getAllFields(); ?>
 	    </div>
 	    <div id="col-right">
-	    	<p>Preview & order of fields arrangement on a product (just drag & drop)</p>
+	    	<p><b>Preview & order of fields arrangement on a product (just drag & drop)</b></p>
 	    	<div>
-	    	<?php $s->getAllFieldsSortable(); ?>
+	    	<?php $setting->getAllFieldsSortable(); ?>
 	    	</div>
 	    </div>   	
     </div>
@@ -58,7 +74,8 @@ function ups_settings() {
 
 
 function adding_field() {
-	$s = new UPSSettings();
+	$setting = new UPSSettings();
+	$featured = new UPSFeatured();
 
 	global $wpdb; 
 	$data = array();
@@ -69,16 +86,16 @@ function adding_field() {
       $data['error']['message'] = 'Unauthorized access!';
     }
     
-    if( $s->isEmpty($_POST['field_name']))
+    if( $featured->isEmpty($_POST['field_name']))
     {
     	$data['error']['field_name'] = 'Field name can not be blank!';
     }
-    elseif( $s->isFieldNameExist($_POST['field_name']) )
+    elseif( $setting->isFieldNameExist($_POST['field_name']) )
     {
     	$data['error']['field_name'] = 'Field name already exist!';
     }
 
-    if( $s->isEmpty($_POST['content']))
+    if( $featured->isEmpty($_POST['content']))
     {
     	$data['error']['content'] = 'Content type required!';
     }
@@ -95,8 +112,8 @@ function adding_field() {
 
 		    	$wpdb->insert("{$wpdb->prefix}posts", 
 				array(  
-				'post_title' => esc_sql($_POST['field_name']),	
-				'post_content' => esc_sql($_POST['description']),
+				'post_title' => $featured->safeStr($_POST['field_name']),	
+				'post_content' => $featured->safeStr($_POST['description']),
 				'post_type' => 'ups_field',
 				'post_author' => $current_user,
 				'post_date' => $current_time,
@@ -109,11 +126,11 @@ function adding_field() {
 
 		$post_id = $wpdb->insert_id;
 
-		add_post_meta( $post_id, 'ups_field_content', esc_sql($_POST['content']) );
+		add_post_meta( $post_id, 'ups_field_content', $_POST['content'] );
 
     	$data['success']['message'] = 'Field successfully created!';
 
-    	$row = $s->getField($post_id);
+    	$row = $setting->getField($post_id);
     	$data['success']['field'] = $row;
 
     }
@@ -146,3 +163,38 @@ function sort_filters()
 }
 
 add_action( 'wp_ajax_sort_filters', 'sort_filters' );
+
+
+function save_other_settings()
+{
+	global $wpdb;
+	$setting = new UPSSettings();
+	$featured = new UPSFeatured();
+	$current_time = current_time( 'mysql' );
+	$current_time_gmt = current_time( 'mysql', 1 );
+	$current_user = get_current_user_id();
+
+
+	$status = $featured->isEmpty($_POST['is_csv_file_added_to_cart']) ? 'draft' : 'publish';
+
+	$post = $setting->getPostStatusByPostType('ups_csv_added_cart');	
+
+	$my_post = array(
+		      'ID'           => $post['ID'],
+		      'post_type' => 'ups_csv_added_cart',
+		      'post_status'   => $status,
+		      'post_date' => $current_time,
+			  'post_date_gmt' => $current_time_gmt,
+			  'post_modified' => $current_time,
+			  'post_modified_gmt' => $current_time_gmt, 
+		  );
+
+  		wp_insert_post( $my_post );
+
+	wp_die();
+}
+
+
+
+
+add_action('wp_ajax_other_settings', 'save_other_settings');
